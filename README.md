@@ -1,6 +1,5 @@
 # First-Year-Project-Minesweeper-Game-Development-and-Comparative-ChatGPT-Study
-# 🎮 Minesweeper Game Development & ChatGPT Performance Analysis
-# 🎮 First-Year Computer Science Projects — Minesweeper & Dungeon Crawler
+# 🎮 First-Year Computer Science Projects — Minesweeper & Dungeon Crawler  & ChatGPT Performance Analysis
 
 [![Python](https://img.shields.io/badge/Python-3.x-blue.svg)](https://www.python.org/)
 [![LaTeX](https://img.shields.io/badge/Report-LaTeX-green.svg)](https://www.latex-project.org/)
