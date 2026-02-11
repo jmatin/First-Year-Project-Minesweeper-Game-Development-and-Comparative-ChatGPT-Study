@@ -1,0 +1,197 @@
+
+
+import random
+import sys
+
+def create_board(n : int, m : int):
+    return [["." for col in range(m)] for raw in range(n)]
+
+def print_board(board) :
+
+    n = len(board)                                  # #lignes
+    m = len(board[0])                               # #colonnes
+    create_board(n,m)
+    number_list_first_line = [str(j) for j in list(range(1,int(m/10)+1)) for i in list(range(10)) ]  # on rassemble dans une liste "1111..., 2222.. etc... jusque 9999...
+    number_list_first_line_print = []              # (i) on va injecter dans cette liste les elem de number_list_first_line jusqu'à ce que la taille de cette liste == m-10
+    number_list_second_line = [str(j) for j in list(range(10)) * ( int(m/10) +10 )]                  # on rassemble dans une liste les nombres du style "123456789"
+    number_list_second_line_print= []              # (ii) on va injecter dans cette liste les elem de number_list_second_line jusqu'à ce que la taille de cette liste == m
+    for i in range(m-10) :
+        number_list_first_line_print.append(number_list_first_line[i])                     # on applique (i)
+    for i in range(m) :
+        number_list_second_line_print.append(number_list_second_line[i])                   # on applique (ii)
+    if len(board[0])<=10 :                                                                 # dimension de la largeur du plateau <=10
+        print("     " + " ".join([str(i) for i in list(range(m))]))
+        print( "   "+ ''.join(["__"]*(m+1)) + "_")
+    elif len(board[0]) >10 :                                                               # dimension de la largeur du plateau >10
+        print(" " * 25 + " ".join(number_list_first_line_print))
+        print("     " + " ".join(number_list_second_line_print))
+        print( "   "+ ''.join(["__"]*(m+1)) + "_")
+    for i in range(n) :
+        if i <=9 :
+            print(" " +  str(i) + " "+"|" +" "+ " ".join([str(board[i][j]) for j in list(range(m)) ]) + " |")  # on insère un espace devant chaque chiffres jusque 9 inclu
+        elif i>=  10 :
+            print(str(i) +" "+ "|" + " " + " ".join([str(board[i][j]) for j in list(range(m))]) + " |")        # on supprime l'espace à partir de 10
+    print( "   "+ ''.join(["__"]*(m+1)) + "_")
+
+
+def get_size(board) :
+    return (len(board),len(board[0]))
+
+def get_neighbors(board , pos_x , pos_y ) :
+    voisin = []
+    potential_neighbors = [(pos_x-1,pos_y),(pos_x-1,pos_y-1),(pos_x,pos_y-1),(pos_x+1,pos_y-1),(pos_x+1,pos_y),(pos_x+1,pos_y+1),(pos_x,pos_y+1),(pos_x-1,pos_y+1)] # maximum 8 voisins
+    for elem in potential_neighbors:
+        if (elem[0] >= 0 and elem[1] >= 0)  and ( elem[0] <len(board) and elem[1] < len(board[0])) :  # les coordonées doivent être >=0 et plus petites ou égales
+            voisin.append(elem)                                                                       # aux bords du plateau de jeu
+    return voisin
+
+def get_value_neighborhood (voisins, board) :
+     """cette fontion retourne les valeurs du voisinage prises dans board """
+     ret = []
+     for elem in voisins :
+        ret.append(board[elem[0]][elem[1]])
+     return ret
+
+def place_mines(reference_board , number_of_mines ,first_pos_x , first_pos_y )  :
+    neighborhood = get_neighbors(reference_board, first_pos_x,first_pos_y)  # liste des voisins lors du premier coup
+    mines_list = []
+    positions = []
+    count =[]
+    index = 0
+    for i in range(len(reference_board)) :             # initialisation d'une liste d'indices (de la matrice reference board) sur laquelle on etablira                                    # des indices au hasard
+        for j in range(len(reference_board[0])) :      # les mines au hasard
+            if (i,j) not in neighborhood and (i,j) != (first_pos_x,first_pos_y) :
+                positions.append((i,j))
+    while index < number_of_mines:
+        a =  random.randint(0,len(positions) - 1)      # a est le nombre tiré au hasard qui correspond à l'ordre d'un element dans la liste position
+        if a not in count :
+            count.append(a)                            # on ne veut pas 2 nombres les memes !
+            mines_list.append(positions[a])
+            index+=1
+    return mines_list
+
+def counting_function (reference_board, x,y) :
+    """ cette fonction compte le nombre de mines autour d'une unique position dans reference_board """
+    liste_of_mines =[]
+    count= 0
+    voisinage = get_neighbors(reference_board,x,y)
+    for i in range(len(reference_board)) :
+        for j in range(len(reference_board[0])) :
+            if reference_board[i][j]== "X" :
+                liste_of_mines.append((i,j))
+    for elem in voisinage :
+        if elem in liste_of_mines:
+            count+=1
+    return count
+
+def fill_in_board(reference_board) :
+    for i in range(len(reference_board)) :
+        for j in range(len(reference_board[0])) :
+            if reference_board[i][j] != "X":       # on compte le nombre de mine autour de chaque case sauf celle qui sont des mines sinon des nombres
+                reference_board[i][j] = counting_function(reference_board,i,j)        # apparaissent à la place des mines
+
+def propagate_click_ret(game_board , reference_board, pos_x , pos_y ) :
+    """ Cette fonction permet de retourner une liste définitive sans devoir print chaque étape dans le terminal """
+    neighbors_list = get_neighbors(reference_board, pos_x, pos_y)
+    if reference_board[pos_x][pos_y] == 0 :                                 # le premier coup est toujours un zero (pas de mine autour du premier coup)
+        game_board[pos_x][pos_y] = 0                                        # la case équivalente dans game board prend la valeur 0
+        for neighbor in neighbors_list :
+            if reference_board[neighbor[0]][neighbor[1]] == 0 and game_board[neighbor[0]][neighbor[1]]!=0 :  # le "and" permet à la récursion de ne pas revenir sur un
+                propagate_click_ret(game_board,reference_board, neighbor[0], neighbor[1])                    # un "0" déjà traité
+            else :
+                game_board[neighbor[0]][neighbor[1]] = reference_board[neighbor[0]][neighbor[1]]             # Enfin on affiche dans game board les valeurs de l'ensemble
+    return game_board                                                                                        # du voisinage
+
+def propagate_click(game_board , reference_board, pos_x , pos_y ) :
+   propagate = propagate_click_ret(game_board , reference_board, pos_x , pos_y )    # on affiche game_board une fois la récursion de la fonction analogue précédente a retourné
+   print_board(propagate)                                                   # game_board sous forme de liste
+
+def parse_input(n,m) :
+    letter = str(input(" \nJouer un coup\n\n"))
+    while letter[0] not in ["f","F","c","C"] :                  # on identifie l'exception
+        letter = str(input(" Jouer un coup "))                  # tant que le format n'est pas respecté
+        if letter[0] == "f" or letter[0] =="F":                 # on redemande au joueur de jouer son coup
+            ret = ("f", int(letter[1:3]), int(letter[3:]))
+        elif letter[0] == "c" or letter[0] =="C":
+            ret = ("c", int(letter[1:3]), int(letter[3:]))      # Pour toute valeur majuscule ou minuscule correct, parse_input[0] == c ou f
+
+    if letter[0] == "f" or letter[0] =="F" :                    # s'il n'y a pas d'exception à lever
+        ret =  ("f", int(letter[1:3]), int(letter[3:]))
+    elif letter[0] == "c" or letter[0] =="C" :
+        ret = ("c", int(letter[1:3]), int(letter[3:]))
+
+    return ret
+
+def check_win(game_board , reference_board , mines_list , total_flags) :
+    bolean = True
+    number_of_undisclosed_cases = len(game_board)* len(game_board[0])
+    """1 ere condition """
+    list_of_flags = []                                                 # on va y mettre l'ensemble des drapeaux de game board
+    for  i in range(len(game_board)) :
+        for j in range(len(game_board[0])) :
+            if game_board[i][j] == "F" :
+                list_of_flags.append((i,j))
+    list_of_flags.sort()                                               # pour qu'il y ait égalité il faut au préalable trier les deux liste
+    mines_list.sort()
+    if list_of_flags == mines_list:                                    # si et seulement si la liste des mines egale la lis_of_flags
+        return bolean
+    """deuxieme condition"""
+    for  i in range(len(game_board)) :
+        for j in range(len(game_board[0])) :
+            if game_board[i][j] != "." and game_board[i][j] != "F":    # les drapeaux comptent comme des cases non dévoilées
+                number_of_undisclosed_cases -=1
+    if number_of_undisclosed_cases == len(mines_list) :
+        return bolean
+
+    return  False
+
+def init_game(n : int, m : int, number_of_mines : int) :
+
+    game_board = create_board(n,m)                              #Générer les plateaux game_board et reference_board.
+    reference_board = create_board(n,m)
+    disclose_case = parse_input(n,m)
+    while disclose_case[0] not in ["c","C"] :                   # le premier coup doit absolument être un "c" ( pas de drapeau lors du prmeier coup)
+        disclose_case = parse_input(n, m)
+    place_mines_var = place_mines(reference_board,number_of_mines,disclose_case[1],disclose_case[2]) # placer mine
+    for mine in place_mines_var :                               # modification du plateau de référence
+        reference_board[mine[0]][mine[1]] = "X"
+    fill_in_board(reference_board)
+    game_board[disclose_case[1]][disclose_case[2]] = reference_board[1][disclose_case[2]]         # Dévoiler la case choisie précédemment sur le plateau de jeu.
+    propagate = propagate_click_ret(game_board,reference_board,disclose_case[1],disclose_case[2]) #Propager le premier clic et ainsi dévoiler toutes les cases autour de la première case tant qu’aucune mine n’est rencontrée.
+    game_board = propagate
+    return game_board,reference_board,place_mines_var
+
+def main() :
+    n = int(sys.argv[1])                               #On reprend les valeurs d'initialisation de la partie
+    m= int(sys.argv[2])
+    total_flag = n*m                                   #On pose par défault le nombre de flag égale au nombre de cases
+    number_of_mines = int(sys.argv[3])
+    init_game_var = init_game(n,m,number_of_mines)     # la liste de liste init_game est placé dans une variable / on affiche le plateau après le 1er coup
+    place_mines_var = init_game_var[2]                 # de là on place la lsite des mines dans une variable aussi
+    print_board(init_game_var[0])
+    boucler = True
+    while not check_win(init_game_var[0],init_game_var[1],place_mines_var,total_flag)  and boucler :  # tant que la cond de victoire n'est pas respectée
+        disclose_case = parse_input(n,m)
+        if disclose_case[0] == "c" :
+            init_game_var[0][disclose_case[1]][disclose_case[2]] = init_game_var[1][disclose_case[1]][disclose_case[2]] # le coup joué prend la valeurde ref board dans game board
+            if (disclose_case[1], disclose_case[2]) in place_mines_var and disclose_case[0] == "c":     # on vérifie d'abord pour la lettre c
+                print("\nVous avez perdu ! \n")                                                         # les condtions de victoire ou de défaite
+                print_board(init_game_var[1])
+                boucler = False
+            elif check_win(init_game_var[0], init_game_var[1], place_mines_var, total_flag) is True:
+                print("\nVictoire \n")
+                print_board(init_game_var[1])
+                boucler= False
+        elif disclose_case[0] == "f":                                                                   # on vérifie ensuite les cond de victoire pour
+            init_game_var[0][disclose_case[1]][disclose_case[2]]="F"                                    # la lettre f cette fois
+            print_board(init_game_var[0])
+            if check_win(init_game_var[0],init_game_var[1],place_mines_var,total_flag) :
+                print("\nVictoire !\n")
+                print_board(init_game_var[1])
+                boucler = False
+        if disclose_case[0] !="f" and boucler :                                                                     # les condtions de parse_input impliquent
+            propagate_click(init_game_var[0],init_game_var[1],disclose_case[1],disclose_case[2])        # que la lettre du coup joué doit etre différent de f
+                                                                                                        # entre autre ca doit etre un c
+if __name__=="__main__":
+    main()
+
